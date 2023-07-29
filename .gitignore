@@ -1,0 +1,26 @@
+# Ignore compiled Python files
+*.pyc
+__pycache__/
+
+# Ignore compiled UI files (if you use .ui files and compile them to .py)
+*.py~
+
+# Ignore system-specific or IDE files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode
+
+# Ignore build and distribution directories
+dist/
+build/
+
+# Ignore environment-related files
+venv/
+.venv/
+*.env
+
+# Ignore any sensitive or confidential information (e.g., API keys, passwords)
+secrets.txt
+
+ml/
