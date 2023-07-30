@@ -24,3 +24,5 @@ venv/
 secrets.txt
 
 ml/
+
+static/*

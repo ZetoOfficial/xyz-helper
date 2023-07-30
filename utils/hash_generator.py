@@ -18,5 +18,12 @@ class FileHashGenerator:
         return hash_md5.hexdigest()
 
     @staticmethod
+    def bytes_md5_hash(file):
+        hash_md5 = hashlib.md5()
+        for chunk in iter(lambda: file.read(4096), b""):
+            hash_md5.update(chunk)
+        return hash_md5.hexdigest()
+
+    @staticmethod
     def check_md5_hash(filename, md5_hash):
         return FileHashGenerator.file_md5_hash(filename) == md5_hash

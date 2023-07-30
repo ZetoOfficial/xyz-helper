@@ -1,8 +1,8 @@
-import os
+from pathlib import Path
 
-import aioredis
 from pydantic import BaseModel
 
+from core.database import memory_database
 from utils.hash_generator import FileHashGenerator
 
 
@@ -18,23 +18,30 @@ class FileNotFoundException(Exception):
     pass
 
 
+class FileNotAbsolute(Exception):
+    pass
+
+
 class LoadFile:
     @staticmethod
     def _validate(filepath: str):
-        if not os.path.exists(filepath):
+        path = Path(filepath)
+        if not path.exists():
             raise FileNotFoundException
+        if not path.is_absolute():
+            raise FileNotAbsolute
 
-    async def execute(self, request: LoadFileRequest, redis: aioredis.Redis) -> LoadFileResponse:
+    async def execute(self, request: LoadFileRequest) -> LoadFileResponse:
         self._validate(request.xyz_path)
 
         hash_generator = FileHashGenerator()
-        session_id = hash_generator.generate_session_id()
 
-        data = {
-            "md5_hash": hash_generator.file_md5_hash(request.xyz_path),
-            "filepath": request.xyz_path,
-        }
-        await redis.hmset(session_id, data)
-        await redis.expire(name=session_id, time=60 * 60 * 2)
+        session_id = hash_generator.generate_session_id()
+        data = {"filepath": request.xyz_path}
+
+        if (result := (await memory_database.find_by_field("filepath", data["filepath"]))) is not None:
+            return LoadFileResponse(session_id=result)
+
+        await memory_database.set(session_id, data)
 
         return LoadFileResponse(session_id=session_id)
