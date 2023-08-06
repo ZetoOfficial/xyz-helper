@@ -1,20 +1,19 @@
 import multiprocessing
-import os.path
 
-import aioredis
 import matplotlib.pyplot as plt
 import pandas as pd
 from joblib import Parallel, delayed
 from pydantic import BaseModel
 from sklearn.mixture import GaussianMixture
 
+from core.database import memory_database, SessionNotFound
+
 
 # Находим оптимальное количество кластеров методом локтя
 def compute_bic(n_components, data):
     gmm = GaussianMixture(n_components=n_components, covariance_type='full', random_state=42)
     gmm.fit(data)
-    bic_score = gmm.bic(data)
-    return bic_score
+    return gmm.bic(data)
 
 
 def find_optimal_clusters_parallel(data, max_clusters=10):
@@ -39,20 +38,25 @@ class ElbowRuleGraphicResponse(BaseModel):
     graphic_path: str
 
 
+def get_public_url(file_path: str) -> str:
+    file_path = file_path.lstrip('/')
+    return f'/{file_path}'
+
+
 class ElbowRuleGraphic:
     @staticmethod
-    async def execute(request: ElbowRuleGraphicRequest, redis: aioredis.Redis) -> ElbowRuleGraphicResponse:
-        redis_data = await redis.hgetall(request.session_id)
+    async def execute(request: ElbowRuleGraphicRequest) -> ElbowRuleGraphicResponse:
+        session_data = await memory_database.get(request.session_id)
+        if not session_data:
+            raise SessionNotFound
 
-        if redis_data.get(b'elbow_rule_filepath') is not None:
-            return ElbowRuleGraphicResponse(graphic_path=redis_data[b'elbow_rule_filepath'].decode('utf-8'))
+        if (path := session_data.get('elbow_rule.png')) is not None:
+            return ElbowRuleGraphicResponse(graphic_path=get_public_url(path))
 
-        df = pd.read_csv(redis_data[b'filepath'].decode('utf-8'), sep=' ', names=['x', 'y', 'z', 'r', 'g', 'b'])
+        df = pd.read_csv(session_data['filepath'], sep=' ', names=['x', 'y', 'z', 'r', 'g', 'b'])
 
-        # Преобразуем RGB в Grayscale
+        # Преобразуем RGB в Grayscale и создаем DataFrame из загруженных данных
         df['grayscale'] = 0.299 * df['r'] + 0.587 * df['g'] + 0.114 * df['b']
-
-        # Создаем DataFrame из загруженных данных
         data = df[['x', 'y', 'z', 'grayscale']].values
 
         # Вызываем функцию и строим график
@@ -64,10 +68,10 @@ class ElbowRuleGraphic:
         plt.xlabel('Количество кластеров')
         plt.ylabel('BIC score')
         plt.title('BIC Score vs. Количество кластеров')
-        filepath = f'{request.session_id}_elbow_rule.png'
+        filepath = f'static/{request.session_id}_elbow_rule.png'
         plt.savefig(filepath, dpi=my_dpi)
-        abs_filepath = os.path.abspath(filepath)
 
-        await redis.hmset(request.session_id, {'elbow_rule_filepath': abs_filepath})
+        session_data.update({'elbow_rule.png': filepath})
+        await memory_database.set(request.session_id, session_data)
 
-        return ElbowRuleGraphicResponse(graphic_path=abs_filepath)
+        return ElbowRuleGraphicResponse(graphic_path=get_public_url(filepath))
