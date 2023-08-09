@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
@@ -23,5 +25,9 @@ app.add_middleware(
 
 # app.add_event_handler("startup", connect_to_mongo)
 # app.add_event_handler("shutdown", close_mongo_connection)
-app.mount('/static', StaticFiles(directory='static'), name='static')
+STATIC_DIR = 'static'
+
+if not os.path.exists(STATIC_DIR):
+    os.makedirs(STATIC_DIR)
+app.mount('/static', StaticFiles(directory=STATIC_DIR), name=STATIC_DIR)
 app.include_router(api_router, prefix=BASE_URL)

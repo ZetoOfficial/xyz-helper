@@ -1,51 +1,25 @@
-import os
-
-from fastapi import Request, HTTPException, status
 from pydantic import BaseModel
-from starlette.requests import ClientDisconnect
-from streaming_form_data import StreamingFormDataParser
-from streaming_form_data.targets import FileTarget, ValueTarget
-
-from core.database import memory_database
-from utils.hash_generator import FileHashGenerator
 
 
 class UploadFileResponse(BaseModel):
     session_id: str
 
 
-class UploadFile:
-    @staticmethod
-    async def execute(request: Request) -> UploadFileResponse:
-        filename = request.headers.get('Filename')
+MAX_FILE_SIZE = 1024 * 1024 * 1024 * 10  # = 4GB
+MAX_REQUEST_BODY_SIZE = MAX_FILE_SIZE + 1024
 
-        if not filename:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='Filename header is missing')
-        try:
-            filepath = os.path.join('static/', os.path.basename(filename))
-            file_ = FileTarget(filepath)
-            data = ValueTarget()
-            parser = StreamingFormDataParser(headers=request.headers)
-            parser.register('file', file_)
-            parser.register('data', data)
 
-            async for chunk in request.stream():
-                parser.data_received(chunk)
-        except ClientDisconnect:
-            raise HTTPException(500, detail='Client disconnected')
-        except Exception:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail='There was an error uploading the file'
-            )
+class MaxBodySizeException(Exception):
+    def __init__(self, body_len: str):
+        self.body_len = body_len
 
-        if not file_.multipart_filename:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='File is missing')
 
-        session_id = FileHashGenerator().generate_session_id()
+class MaxBodySizeValidator:
+    def __init__(self, max_size: int):
+        self.body_len = 0
+        self.max_size = max_size
 
-        if (result := (await memory_database.find_by_field("filepath", filepath))) is not None:
-            return UploadFileResponse(session_id=result)
-
-        await memory_database.set(session_id, {"filepath": filepath})
-
-        return UploadFileResponse(session_id=session_id)
+    def __call__(self, chunk: bytes):
+        self.body_len += len(chunk)
+        if self.body_len > self.max_size:
+            raise MaxBodySizeException(body_len=self.body_len)
