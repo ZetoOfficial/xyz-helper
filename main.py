@@ -23,8 +23,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+def disable():
+    for filename in os.listdir('static'):
+        file_path = os.path.join('static', filename)
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+            print(f"Removed: {file_path}")
+
+
 # app.add_event_handler("startup", connect_to_mongo)
-# app.add_event_handler("shutdown", close_mongo_connection)
+app.add_event_handler("shutdown", disable)
 STATIC_DIR = 'static'
 
 if not os.path.exists(STATIC_DIR):

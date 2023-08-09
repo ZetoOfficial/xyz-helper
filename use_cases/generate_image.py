@@ -29,8 +29,8 @@ def get_public_url(file_path: str) -> str:
 class GenerateImage:
     @staticmethod
     async def execute(request: GenerateImageRequest) -> GenerateImageResponse:
-        df = await BaseCommand.execute(request)
-        data = BaseCommand.sort_and_group_data(df, request)
+        df = await BaseCommand.execute(request.session_id, request.optimal_clusters)
+        data = BaseCommand.sort_and_group_data(df, request.optimal_clusters)
         cluster_images = []
 
         for i in range(request.optimal_clusters):

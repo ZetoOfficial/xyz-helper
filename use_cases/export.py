@@ -22,8 +22,8 @@ def get_public_url(file_path: str) -> str:
 class Export:
     @staticmethod
     async def execute(request: ExportRequest) -> ExportResponse:
-        df = await BaseCommand.execute(request)
-        data = BaseCommand.sort_and_group_data(df, request)
+        df = await BaseCommand.execute(request.session_id, request.optimal_clusters)
+        data = BaseCommand.sort_and_group_data(df, request.optimal_clusters)
 
         df = pd.DataFrame(data[:, :-1])
         filepath = f'static/{request.session_id}_cluster_{"_".join(str(i) for i in request.cluster_indexes)}.xyz'
