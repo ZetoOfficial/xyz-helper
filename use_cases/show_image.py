@@ -24,7 +24,8 @@ class ShowImage:
     @staticmethod
     async def execute(request: ShowImageRequest) -> ShowImageResponse:
         df = await BaseCommand.execute(request.session_id, request.optimal_clusters)
-        data = BaseCommand.sort_and_group_data(df, request.optimal_clusters)
+        data = BaseCommand.sort_and_group_data(df, request.optimal_clusters, request.cluster_indexes)
+
         x, y, z, r, g, b = data[:, :6].T
         points = np.column_stack((x, y, z))
         colors = np.column_stack((r, g, b))

@@ -29,17 +29,8 @@ class BaseCommand:
         return df
 
     @staticmethod
-    def sort_and_group_data(df: pd.DataFrame, optimal_clusters: int):
+    def sort_and_group_data(df: pd.DataFrame, optimal_clusters: int, indexes: list[int] = None) -> np.ndarray:
         data = df.to_numpy()
-        # sorted_data = data[data[:, -1].argsort()]
-        # temp_data = [[] for _ in range(optimal_clusters)]
-        # j = 0
-        # for i in range(optimal_clusters):
-        #     while i == sorted_data[j][-1]:
-        #         j += 1
-        #         if j == len(sorted_data):
-        #             break
-        #     temp_data[i] = sorted_data[j - 1 : j]
 
         j = 0
         temp = 0
@@ -53,4 +44,6 @@ class BaseCommand:
             temp_data[i] = sorted_data[temp:j]
             temp = j
 
+        if indexes:
+            temp_data = [temp_data[i] for i in indexes]
         return np.concatenate(temp_data)

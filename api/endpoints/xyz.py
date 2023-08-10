@@ -2,6 +2,7 @@ import os
 
 import streaming_form_data
 from fastapi import APIRouter, HTTPException, Request, status
+from fastapi.responses import FileResponse
 from starlette.requests import ClientDisconnect
 from streaming_form_data import StreamingFormDataParser
 from streaming_form_data.targets import FileTarget, ValueTarget
@@ -9,7 +10,7 @@ from streaming_form_data.validators import MaxSizeValidator
 
 from core.database import SessionNotFound, memory_database
 from use_cases.elbow_rule_graphic import ElbowRuleGraphic, ElbowRuleGraphicRequest, ElbowRuleGraphicResponse
-from use_cases.export import Export, ExportRequest, ExportResponse
+from use_cases.export import Export, ExportRequest
 from use_cases.generate_image import GenerateImage, GenerateImageRequest, GenerateImageResponse
 from use_cases.load_file import FileNotAbsolute, FileNotFoundException, LoadFile, LoadFileRequest, LoadFileResponse
 from use_cases.show_image import ShowImage, ShowImageRequest, ShowImageResponse
@@ -84,7 +85,7 @@ async def load_file(request: LoadFileRequest):
         raise HTTPException(status_code=400, detail='File not found')
 
 
-@router.post('/export', response_model=ExportResponse)
+@router.post('/export', response_class=FileResponse)
 async def export(request: ExportRequest):
     try:
         return await Export().execute(request)
