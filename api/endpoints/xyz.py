@@ -2,7 +2,7 @@ import os
 
 import streaming_form_data
 from fastapi import APIRouter, HTTPException, Request, status
-from fastapi.responses import FileResponse
+from fastapi.responses import StreamingResponse
 from starlette.requests import ClientDisconnect
 from streaming_form_data import StreamingFormDataParser
 from streaming_form_data.targets import FileTarget, ValueTarget
@@ -85,7 +85,7 @@ async def load_file(request: LoadFileRequest):
         raise HTTPException(status_code=400, detail='File not found')
 
 
-@router.post('/export', response_class=FileResponse)
+@router.post('/export', response_class=StreamingResponse)
 async def export(request: ExportRequest):
     try:
         return await Export().execute(request)
